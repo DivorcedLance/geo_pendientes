@@ -55,7 +55,7 @@ table.matrix .row-label { background: #d9e2ec; font-weight: 600; text-align: lef
 
   .slope-row { display: flex; align-items: flex-start; gap: 8px; }
   .slope-box { flex: 1; text-align: center; }
-  .slope-box svg { width: 100%; max-width: 260px; height: auto; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .slope-box canvas { width: 100%; max-width: 260px; height: auto; aspect-ratio: 300 / 210; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: block; }
   .slope-box .slope-label { font-weight: 700; font-size: 15px; margin-top: 6px; color: #1f4e79; }
   .slope-box .slope-range { font-size: 12px; color: #777; }
 
@@ -113,7 +113,7 @@ table.matrix .row-label { background: #d9e2ec; font-weight: 600; text-align: lef
   @media (max-width: 1024px) {
     .layout { flex-direction: column; }
     .panel-col { width: 100%; }
-    .slope-box svg { max-width: 200px; }
+    .slope-box canvas { max-width: 200px; }
     .slope-row { flex-wrap: wrap; }
   }
 </style>
@@ -159,14 +159,14 @@ table.matrix .row-label { background: #d9e2ec; font-weight: 600; text-align: lef
           <div style="text-align:center;margin-bottom:10px;font-weight:600;font-size:13px;color:#1f4e79" id="vs-label">PN1 vs PN2</div>
           <div class="slope-row">
             <div class="slope-box">
-              <div id="slope-left"></div>
+              <canvas id="slope-left" width="300" height="210"></canvas>
               <div class="slider-control">
                 <label><span id="angle-left-label">0°</span> <span class="angle-display" id="angle-left-display">2.5°</span></label>
                 <input type="range" id="slider-left" min="0" max="5" step="0.1" value="2.5">
               </div>
             </div>
             <div class="slope-box">
-              <div id="slope-right"></div>
+              <canvas id="slope-right" width="300" height="210"></canvas>
               <div class="slider-control">
                 <label><span id="angle-right-label">0°</span> <span class="angle-display" id="angle-right-display">2.5°</span></label>
                 <input type="range" id="slider-right" min="0" max="5" step="0.1" value="2.5">
@@ -272,38 +272,81 @@ const PN_RANGES = [
   { min: 45, max: 90, def: 67.5, color: '#8a7a6a', accent: '#5a4a3a' }
 ];
 
-function slopeSVG(pn, range, angleDeg, color, accent) {
-  const bx = 30, by = 170, ex = 270, w = 300, hh = 210;
-  const baseW = ex - bx;
+function drawSlopeCanvas(canvasId, pn, range, angleDeg, color, accent) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = 300, H = 210;
+  const bx = 55, by = 175;
+
   const a = Math.min(Math.max(angleDeg, 0), 90);
   const aRad = a * Math.PI / 180;
-  const refH = 130;
-  let h = a <= 45 ? Math.round(refH * Math.tan(aRad)) : refH + Math.round((a - 45) / 45 * (by - 30 - refH));
-  if (h > by - 25) h = by - 25;
-  const r = 42;
+  const maxH = 135;
+
+  let triW = Math.round(maxH / Math.tan(Math.max(aRad, 0.01745)));
+  if (triW > 200) triW = 200;
+  if (triW < 2) triW = 2;
+  let triH = Math.round(triW * Math.tan(aRad));
+  if (triH > maxH) { triH = maxH; triW = Math.round(triH / Math.tan(Math.max(aRad, 0.01745))); }
+  if (triW < 2) triW = 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#f0f4f8';
+  ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(W-9, 0); ctx.lineTo(W-1, 8); ctx.lineTo(W-1, H-9); ctx.lineTo(W-9, H-1); ctx.lineTo(8, H-1); ctx.lineTo(0, H-9); ctx.lineTo(0, 8); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = '#1f4e79';
+  ctx.font = 'bold 15px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(pn, W/2, 22);
+  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.fillStyle = '#555';
+  ctx.fillText(range, W/2, 42);
+
+  const ex = bx + triW;
+  const ey = by - triH;
+
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(20, by); ctx.lineTo(W-15, by); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = color; ctx.globalAlpha = 0.5;
+  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, by); ctx.lineTo(ex, ey); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = accent; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(ex, ey); ctx.stroke();
+
+  ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
+  ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex, by); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+  ctx.fillStyle = accent;
+  ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 2*Math.PI); ctx.fill();
+
+  const r = 50;
+  ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(bx, by, r, -aRad, 0); ctx.stroke();
+
   const arcEndX = bx + r * Math.cos(aRad);
   const arcEndY = by - r * Math.sin(aRad);
-  const arcEndX2 = bx + (r+6) * Math.cos(aRad);
-  const arcEndY2 = by - (r+6) * Math.sin(aRad);
-  return `<svg viewBox="0 0 ${w} ${hh}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="${w}" height="${hh}" fill="#f0f4f8" rx="8"/>
-    <text x="150" y="24" text-anchor="middle" font-weight="700" font-size="15" fill="#1f4e79" font-family="Segoe UI,sans-serif">${pn}</text>
-    <text x="150" y="42" text-anchor="middle" font-size="12" fill="#555" font-family="Segoe UI,sans-serif">${range}</text>
-    <line x1="${bx}" y1="${by}" x2="${ex}" y2="${by}" stroke="#bbb" stroke-width="1.5" stroke-dasharray="5,4"/>
-    <polygon points="${bx},${by} ${ex},${by} ${ex},${by-h}" fill="${color}" opacity="0.55"/>
-    <path d="M ${bx},${by} L ${ex},${by-h}" stroke="${accent}" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <line x1="${ex}" y1="${by-h}" x2="${ex}" y2="${by}" stroke="${accent}" stroke-width="1" opacity="0.3" stroke-dasharray="3,3"/>
-    <circle cx="${ex}" cy="${by-h}" r="4" fill="${accent}" opacity="0.8"/>
-    <path d="M ${bx+r},${by} A ${r},${r} 0 0,1 ${arcEndX},${arcEndY}" fill="none" stroke="#d32f2f" stroke-width="2.5"/>
-    <line x1="${arcEndX}" y1="${arcEndY}" x2="${arcEndX2}" y2="${arcEndY2}" stroke="#d32f2f" stroke-width="2" stroke-linecap="round"/>
-    <text x="${bx+r+20}" y="${by-r+8}" font-size="19" fill="#d32f2f" font-weight="900" font-family="Segoe UI,sans-serif">${Math.round(a)}&deg;</text>
-  </svg>`;
+  ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(arcEndX, arcEndY); ctx.lineTo(arcEndX + 6 * Math.cos(aRad), arcEndY - 6 * Math.sin(aRad)); ctx.stroke();
+
+  const midA = aRad / 2;
+  const labelR = r + 26;
+  const lx = bx + labelR * Math.cos(midA);
+  const ly = by - labelR * Math.sin(midA);
+  ctx.fillStyle = '#d32f2f';
+  ctx.font = 'bold 20px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(a) + '\u00B0', lx, ly);
 }
 
-function renderSlopeWithAngle(index, containerId, angleDeg) {
+function renderSlopeWithAngle(index, canvasId, angleDeg) {
   const r = PN_RANGES[index];
-  const el = document.getElementById(containerId);
-  el.innerHTML = slopeSVG(LABELS[index], RANGES[index], angleDeg, r.color, r.accent);
+  drawSlopeCanvas(canvasId, LABELS[index], RANGES[index], angleDeg, r.color, r.accent);
 }
 
 function buildMatrix() {

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz de Pendientes - AHP CENEPRED</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e8ecf1; color: #222; padding: 20px; }
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  header {
+    background: linear-gradient(135deg, #1f4e79, #2a6a9e); color: #fff; padding: 18px 28px; border-radius: 10px 10px 0 0;
+    font-size: 20px; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 12px;
+  }
+  header small { font-weight: 400; font-size: 13px; opacity: 0.8; margin-left: auto; }
+
+  .layout { display: flex; gap: 24px; background: #fff; padding: 24px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); flex-wrap: wrap; }
+  .matrix-col { flex: 1; min-width: 560px; }
+  .panel-col { width: 520px; flex-shrink: 0; }
+
+  h3 { font-size: 14px; color: #1f4e79; margin: 0 0 12px 0; padding-bottom: 6px; border-bottom: 2px solid #d9e2ec; text-transform: uppercase; letter-spacing: 0.5px; }
+  h3 .step { display: inline-block; background: #1f4e79; color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 10px; margin-right: 8px; }
+
+  .matrix-wrap { overflow-x: auto; }
+  table.matrix { border-collapse: collapse; font-size: 14px; width: 100%; }
+  table.matrix th, table.matrix td { border: 1px solid #c8d4e0; padding: 8px 10px; text-align: center; min-width: 64px; }
+table.matrix th { background: #d9e2ec; font-weight: 600; font-size: 13px; color: #1a3a5a; position: relative; transition: background 0.2s; }
+table.matrix th.highlight, .row-label.highlight { background: #bbdefb !important; color: #0d2b4e !important; }
+table.matrix th .deg { display: block; font-weight: 400; font-size: 10px; color: #5a7a9a; }
+table.matrix .row-label { background: #d9e2ec; font-weight: 600; text-align: left; padding: 8px 12px; font-size: 13px; white-space: nowrap; min-width: 100px; transition: background 0.2s; }
+  table.matrix .row-label .deg { font-weight: 400; font-size: 10px; color: #5a7a9a; display: block; }
+  table.matrix td.diag { background: #fffde7; font-weight: 700; color: #b8860b; }
+  table.matrix td.upper { cursor: pointer; background: #fff; transition: background 0.15s; font-weight: 500; }
+  table.matrix td.upper:hover { background: #e3f2fd; }
+  table.matrix td.upper.active { background: #bbdefb; box-shadow: inset 0 0 0 2px #1f4e79; }
+  table.matrix td.upper input { width: 60px; border: 1px solid #90a4ae; border-radius: 4px; padding: 4px 6px; text-align: center; font-size: 14px; font-family: inherit; outline: none; }
+  table.matrix td.upper input:focus { border-color: #1f4e79; box-shadow: 0 0 0 2px rgba(31,78,121,0.2); }
+  table.matrix td.upper input.error { border-color: #d32f2f; background: #fff5f5; }
+  table.matrix td.lower { background: #f5f7fa; color: #555; font-weight: 400; }
+  table.matrix .total-row td { background: #f2f2f2; font-weight: 700; border-top: 2px solid #bbb; }
+  table.matrix .total-label { background: #f2f2f2; font-weight: 700; text-align: right; padding-right: 12px; }
+
+  .comparison-panel {
+    background: #f8fafc; border: 1px solid #d9e2ec; border-radius: 10px; padding: 20px;
+    position: sticky; top: 20px;
+  }
+  .comparison-panel .placeholder {
+    text-align: center; padding: 40px 20px; color: #999; font-size: 14px;
+  }
+  .comparison-panel .placeholder strong { display: block; font-size: 16px; color: #666; margin-bottom: 6px; }
+  .comparison-content { display: none; }
+  .comparison-panel.active .placeholder { display: none; }
+  .comparison-panel.active .comparison-content { display: block; }
+
+  .slope-row { display: flex; align-items: flex-start; gap: 8px; }
+  .slope-box { flex: 1; text-align: center; }
+  .slope-box svg { width: 100%; max-width: 260px; height: auto; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .slope-box .slope-label { font-weight: 700; font-size: 15px; margin-top: 6px; color: #1f4e79; }
+  .slope-box .slope-range { font-size: 12px; color: #777; }
+
+.slider-control { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+.slider-control label { font-size: 11px; color: #555; display: flex; justify-content: space-between; }
+.slider-control input[type=range] { width: 100%; margin: 0; accent-color: #1f4e79; height: 4px; cursor: pointer; }
+.slider-control .angle-display { font-weight: 700; color: #d32f2f; }
+.edit-area { margin-top: 16px; padding: 14px; background: #fff; border-radius: 8px; border: 1px solid #e0e7ef; }
+  .edit-area label { font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 6px; }
+  .input-group { display: flex; gap: 8px; align-items: center; }
+  .input-group input { flex: 1; padding: 8px 12px; border: 2px solid #c8d4e0; border-radius: 6px; font-size: 16px; font-family: inherit; text-align: center; outline: none; }
+  .input-group input:focus { border-color: #1f4e79; }
+  .input-group input.error { border-color: #d32f2f; background: #fff5f5; }
+  .input-group .current-val { font-size: 13px; color: #666; white-space: nowrap; }
+  .saaty-ref { margin-top: 12px; font-size: 11px; color: #555; line-height: 1.7; padding: 10px 12px; background: #f8f9fb; border-radius: 6px; border-left: 3px solid #1f4e79; }
+  .saaty-ref .title { font-weight: 700; font-size: 11px; color: #1f4e79; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .saaty-ref .row { display: flex; gap: 4px; }
+  .saaty-ref .val { display: inline-block; width: 18px; font-weight: 700; color: #1f4e79; }
+  .saaty-ref .sep { color: #ccc; margin: 0 2px; }
+  .saaty-ref .note { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #d9e2ec; font-size: 10px; color: #666; }
+  .saaty-ref .note code { background: #e8ecf1; padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+
+  .actions { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
+  .actions button {
+    padding: 10px 32px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+  }
+  .btn-export { background: linear-gradient(135deg, #27ae60, #2ecc71); color: #fff; }
+  .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
+
+  .results { display: none; margin-top: 28px; }
+  .results.visible { display: block; }
+
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .result-card { background: #fff; border: 1px solid #d9e2ec; border-radius: 10px; padding: 20px; }
+  .result-card h4 { font-size: 13px; color: #1f4e79; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  table.norm { border-collapse: collapse; font-size: 13px; width: 100%; }
+  table.norm th, table.norm td { border: 1px solid #d9e2ec; padding: 6px 8px; text-align: center; }
+  table.norm th { background: #e8eef5; font-weight: 600; font-size: 12px; color: #1a3a5a; }
+  table.norm .weight-col { background: #ebf5e8; font-weight: 700; color: #2e7d32; }
+
+  .cons-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px; align-items: center; }
+  .cons-grid .label { font-weight: 600; color: #444; }
+  .cons-grid .value { font-weight: 700; font-size: 16px; color: #1f4e79; }
+  .cons-grid .value.pass { color: #27ae60; }
+  .cons-grid .value.fail { color: #d32f2f; }
+  .eval-box { margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 15px; text-align: center; }
+  .eval-box.pass { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .eval-box.fail { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+
+
+
+  @media (max-width: 1024px) {
+    .layout { flex-direction: column; }
+    .panel-col { width: 100%; }
+    .slope-box svg { max-width: 200px; }
+    .slope-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <span>&#x1F3D4;</span> Matriz de Pendientes 5&times;5 &mdash; M&eacute;todo AHP (CENEPRED)
+    <small>Comparaci&oacute;n de Pares &middot; Escala de Saaty</small>
+  </header>
+
+  <div class="layout">
+    <div class="matrix-col">
+      <h3><span class="step">1</span> Matriz de Comparaciones Pareadas</h3>
+      <div class="matrix-wrap">
+        <table class="matrix" id="matrix">
+          <thead>
+            <tr><th></th>
+              <th data-pn="0">PN1<span class="deg">0-5&deg;</span></th>
+              <th data-pn="1">PN2<span class="deg">5-15&deg;</span></th>
+              <th data-pn="2">PN3<span class="deg">15-25&deg;</span></th>
+              <th data-pn="3">PN4<span class="deg">25-45&deg;</span></th>
+              <th data-pn="4">PN5<span class="deg">&gt;45&deg;</span></th>
+            </tr>
+          </thead>
+          <tbody id="matrix-body">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button class="btn-export" id="btn-export">&#x1F4E4; Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div class="panel-col">
+      <div class="comparison-panel" id="panel">
+        <div class="placeholder">
+          <strong>&#x1F446; Selecciona una celda</strong>
+          Haz clic en cualquier celda del tri&aacute;ngulo superior de la matriz para comparar pendientes.
+        </div>
+        <div class="comparison-content">
+          <div style="text-align:center;margin-bottom:10px;font-weight:600;font-size:13px;color:#1f4e79" id="vs-label">PN1 vs PN2</div>
+          <div class="slope-row">
+            <div class="slope-box">
+              <div id="slope-left"></div>
+              <div class="slider-control">
+                <label><span id="angle-left-label">0°</span> <span class="angle-display" id="angle-left-display">2.5°</span></label>
+                <input type="range" id="slider-left" min="0" max="5" step="0.1" value="2.5">
+              </div>
+            </div>
+            <div class="slope-box">
+              <div id="slope-right"></div>
+              <div class="slider-control">
+                <label><span id="angle-right-label">0°</span> <span class="angle-display" id="angle-right-display">2.5°</span></label>
+                <input type="range" id="slider-right" min="0" max="5" step="0.1" value="2.5">
+              </div>
+            </div>
+          </div>
+          <div class="edit-area">
+            <label>Valor de comparaci&oacute;n (Escala de Saaty 1&ndash;9 &oacute; 1/X):</label>
+            <div class="input-group">
+              <input type="text" id="cell-input" placeholder="Ej: 3  o  1/3" autocomplete="off">
+              <span class="current-val" id="current-val-display"></span>
+            </div>
+            <div class="saaty-ref">
+              <span class="title">Escala de Saaty</span>
+              <div class="row"><span class="val">1</span> Igual importancia / peligrosidad</div>
+              <div class="row"><span class="val">2</span> Intermedio</div>
+              <div class="row"><span class="val">3</span> Ligeramente m&aacute;s importante</div>
+              <div class="row"><span class="val">4</span> Intermedio</div>
+              <div class="row"><span class="val">5</span> Fuertemente m&aacute;s importante</div>
+              <div class="row"><span class="val">6</span> Intermedio</div>
+              <div class="row"><span class="val">7</span> Demostrablemente m&aacute;s importante</div>
+              <div class="row"><span class="val">8</span> Intermedio</div>
+              <div class="row"><span class="val">9</span> Absolutamente m&aacute;s importante</div>
+              <div class="note">
+                Usa <code>1/X</code> si la fila es <b>menos</b> peligrosa que la columna &middot;
+                Usa <code>X</code> si la fila es <b>m&aacute;s</b> peligrosa que la columna
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-grid">
+      <div class="result-card">
+        <h4>&#x1F4CA; Matriz Normalizada &amp; Pesos (Wi)</h4>
+        <div id="norm-container"></div>
+      </div>
+      <div class="result-card">
+        <h4>&#x2699; Control de Consistencia</h4>
+        <div id="consistency-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LABELS = ['PN1', 'PN2', 'PN3', 'PN4', 'PN5'];
+const RANGES = ['0-5°', '5-15°', '15-25°', '25-45°', '>45°'];
+const FULL = ['PN1 (0-5°)', 'PN2 (5-15°)', 'PN3 (15-25°)', 'PN4 (25-45°)', 'PN5 (>45°)'];
+
+const DEFAULT_VALUES = [
+  [1,    1/2,  1/4,  1/6,  1/9],
+  [2,    1,    1/2,  1/3,  1/5],
+  [4,    2,    1,    1/2,  1/3],
+  [6,    3,    2,    1,    1/2],
+  [9,    5,    3,    2,    1  ]
+];
+
+const RI_MAP = { 1: 0, 2: 0, 3: 0.58, 4: 0.9, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49 };
+
+let matrix = JSON.parse(JSON.stringify(DEFAULT_VALUES));
+let displayVals = [];
+let activeCell = null; // {row, col}
+
+for (let i = 0; i < 5; i++) {
+  displayVals[i] = [];
+  for (let j = 0; j < 5; j++) {
+    displayVals[i][j] = i === j ? '1' : formatVal(DEFAULT_VALUES[i][j]);
+  }
+}
+
+function formatVal(v) {
+  if (v === 1) return '1';
+  if (v < 1) {
+    const r = Math.round(1 / v);
+    if (Math.abs(1 / v - r) < 1e-9 && r >= 2 && r <= 9) return '1/' + r;
+  } else {
+    const r = Math.round(v);
+    if (Math.abs(v - r) < 1e-9 && r >= 1 && r <= 9) return String(r);
+  }
+  return v.toFixed(4);
+}
+
+function parseInput(s) {
+  s = s.trim();
+  const frac = s.match(/^1\/([2-9])$/);
+  if (frac) return { value: 1 / parseInt(frac[1]), display: s };
+  const int = s.match(/^([1-9])$/);
+  if (int) return { value: parseInt(int[1]), display: s };
+  const dec = s.match(/^(\d+(?:\.\d+)?)$/);
+  if (dec) { const v = parseFloat(dec[1]); if (v > 0 && v <= 9) return { value: v, display: formatVal(v) }; }
+  return null;
+}
+
+const PN_RANGES = [
+  { min: 0, max: 5, def: 2.5, color: '#a8d5a2', accent: '#4a7c3f' },
+  { min: 5, max: 15, def: 10, color: '#b8c97a', accent: '#7a8f3f' },
+  { min: 15, max: 25, def: 20, color: '#c4a265', accent: '#8b7340' },
+  { min: 25, max: 45, def: 35, color: '#b5856a', accent: '#7a5540' },
+  { min: 45, max: 90, def: 67.5, color: '#8a7a6a', accent: '#5a4a3a' }
+];
+
+function slopeSVG(pn, range, angleDeg, color, accent) {
+  const bx = 30, by = 170, ex = 270, w = 300, hh = 210;
+  const baseW = ex - bx;
+  const a = Math.min(Math.max(angleDeg, 0), 90);
+  const aRad = a * Math.PI / 180;
+  const refH = 130;
+  let h = a <= 45 ? Math.round(refH * Math.tan(aRad)) : refH + Math.round((a - 45) / 45 * (by - 30 - refH));
+  if (h > by - 25) h = by - 25;
+  const r = 42;
+  const arcEndX = bx + r * Math.cos(aRad);
+  const arcEndY = by - r * Math.sin(aRad);
+  const arcEndX2 = bx + (r+6) * Math.cos(aRad);
+  const arcEndY2 = by - (r+6) * Math.sin(aRad);
+  return `<svg viewBox="0 0 ${w} ${hh}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${w}" height="${hh}" fill="#f0f4f8" rx="8"/>
+    <text x="150" y="24" text-anchor="middle" font-weight="700" font-size="15" fill="#1f4e79" font-family="Segoe UI,sans-serif">${pn}</text>
+    <text x="150" y="42" text-anchor="middle" font-size="12" fill="#555" font-family="Segoe UI,sans-serif">${range}</text>
+    <line x1="${bx}" y1="${by}" x2="${ex}" y2="${by}" stroke="#bbb" stroke-width="1.5" stroke-dasharray="5,4"/>
+    <polygon points="${bx},${by} ${ex},${by} ${ex},${by-h}" fill="${color}" opacity="0.55"/>
+    <path d="M ${bx},${by} L ${ex},${by-h}" stroke="${accent}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <line x1="${ex}" y1="${by-h}" x2="${ex}" y2="${by}" stroke="${accent}" stroke-width="1" opacity="0.3" stroke-dasharray="3,3"/>
+    <circle cx="${ex}" cy="${by-h}" r="4" fill="${accent}" opacity="0.8"/>
+    <path d="M ${bx+r},${by} A ${r},${r} 0 0,1 ${arcEndX},${arcEndY}" fill="none" stroke="#d32f2f" stroke-width="2.5"/>
+    <line x1="${arcEndX}" y1="${arcEndY}" x2="${arcEndX2}" y2="${arcEndY2}" stroke="#d32f2f" stroke-width="2" stroke-linecap="round"/>
+    <text x="${bx+r+20}" y="${by-r+8}" font-size="19" fill="#d32f2f" font-weight="900" font-family="Segoe UI,sans-serif">${Math.round(a)}&deg;</text>
+  </svg>`;
+}
+
+function renderSlopeWithAngle(index, containerId, angleDeg) {
+  const r = PN_RANGES[index];
+  const el = document.getElementById(containerId);
+  el.innerHTML = slopeSVG(LABELS[index], RANGES[index], angleDeg, r.color, r.accent);
+}
+
+function buildMatrix() {
+  const tbody = document.getElementById('matrix-body');
+  tbody.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const tr = document.createElement('tr');
+    const label = document.createElement('td');
+    label.className = 'row-label';
+    label.dataset.pn = i;
+    label.innerHTML = LABELS[i] + '<span class="deg">' + RANGES[i] + '</span>';
+    tr.appendChild(label);
+
+    for (let j = 0; j < 5; j++) {
+      const td = document.createElement('td');
+      if (i === j) {
+        td.className = 'diag';
+        td.textContent = '1';
+      } else if (i < j) {
+        td.className = 'upper';
+        td.dataset.row = i;
+        td.dataset.col = j;
+        td.textContent = displayVals[i][j];
+        td.addEventListener('click', () => onCellClick(i, j));
+      } else {
+        td.className = 'lower';
+        td.textContent = displayVals[i][j];
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  renderTotalRow();
+}
+
+function renderTotalRow() {
+  const tbody = document.getElementById('matrix-body');
+  let tr = tbody.querySelector('.total-row');
+  if (!tr) {
+    tr = document.createElement('tr');
+    tr.className = 'total-row';
+    tbody.appendChild(tr);
+  }
+  tr.innerHTML = '<td class="total-label">TOTAL</td>';
+  for (let j = 0; j < 5; j++) {
+    let sum = 0;
+    for (let i = 0; i < 5; i++) sum += matrix[i][j];
+    const td = document.createElement('td');
+    td.textContent = sum.toFixed(3);
+    tr.appendChild(td);
+  }
+}
+
+function onCellClick(row, col) {
+  if (row >= col) return;
+  activeCell = { row, col };
+
+  document.querySelectorAll('.upper.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('[data-pn].highlight').forEach(el => el.classList.remove('highlight'));
+  const cell = document.querySelector(`.upper[data-row="${row}"][data-col="${col}"]`);
+  if (cell) cell.classList.add('active');
+  const rl = document.querySelector(`.row-label[data-pn="${row}"]`);
+  const ch = document.querySelector(`thead th[data-pn="${col}"]`);
+  if (rl) rl.classList.add('highlight');
+  if (ch) ch.classList.add('highlight');
+
+  document.getElementById('panel').classList.add('active');
+
+  const lAngle = PN_RANGES[row].def;
+  const rAngle = PN_RANGES[col].def;
+  renderSlopeWithAngle(row, 'slope-left', lAngle);
+  renderSlopeWithAngle(col, 'slope-right', rAngle);
+
+  const sl = document.getElementById('slider-left');
+  const sr = document.getElementById('slider-right');
+  sl.min = PN_RANGES[row].min; sl.max = PN_RANGES[row].max; sl.value = lAngle;
+  sr.min = PN_RANGES[col].min; sr.max = PN_RANGES[col].max; sr.value = rAngle;
+  document.getElementById('angle-left-label').textContent = PN_RANGES[row].min + '°';
+  document.getElementById('angle-left-display').textContent = lAngle + '°';
+  document.getElementById('angle-right-label').textContent = PN_RANGES[col].min + '°';
+  document.getElementById('angle-right-display').textContent = rAngle + '°';
+
+  const display = displayVals[row][col];
+  const v = matrix[row][col];
+  document.getElementById('cell-input').value = display;
+  document.getElementById('vs-label').textContent = FULL[row] + ' vs ' + FULL[col];
+  document.getElementById('current-val-display').textContent = '= ' + v.toFixed(4);
+  document.getElementById('cell-input').className = '';
+  document.getElementById('cell-input').focus();
+  document.getElementById('cell-input').select();
+}
+
+document.getElementById('cell-input').addEventListener('input', function() {
+  if (!activeCell) return;
+  const parsed = parseInput(this.value);
+  if (parsed) {
+    this.className = '';
+    setCellValue(activeCell.row, activeCell.col, parsed.value, parsed.display);
+  } else {
+    if (this.value.length > 0) this.className = 'error';
+    else this.className = '';
+  }
+});
+
+document.getElementById('cell-input').addEventListener('blur', function() {
+  if (!activeCell) return;
+  const { row, col } = activeCell;
+  this.value = displayVals[row][col];
+  this.className = '';
+});
+
+document.getElementById('cell-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const parsed = parseInput(this.value);
+    if (parsed && activeCell) {
+      setCellValue(activeCell.row, activeCell.col, parsed.value, parsed.display);
+    }
+    this.blur();
+  }
+  if (e.key === 'Escape') { this.blur(); }
+});
+
+function setCellValue(row, col, value, display) {
+  matrix[row][col] = value;
+  displayVals[row][col] = display;
+  matrix[col][row] = 1 / value;
+  displayVals[col][row] = formatVal(1 / value);
+  updateCellDisplay(row, col);
+  updateCellDisplay(col, row);
+  renderTotalRow();
+  document.getElementById('current-val-display').textContent = '= ' + value.toFixed(4);
+  verifyMatrix();
+}
+
+function updateCellDisplay(row, col) {
+  const upper = document.querySelector(`.upper[data-row="${row}"][data-col="${col}"]`);
+  if (upper) { upper.textContent = displayVals[row][col]; return; }
+  const tbody = document.getElementById('matrix-body');
+  const rows = tbody.querySelectorAll('tr');
+  if (rows[row]) {
+    const cells = rows[row].querySelectorAll('td');
+    if (cells[col + 1]) cells[col + 1].textContent = displayVals[row][col];
+  }
+}
+
+document.getElementById('btn-export').addEventListener('click', exportResults);
+
+document.getElementById('slider-left').addEventListener('input', function() {
+  if (!activeCell) return;
+  const angle = parseFloat(this.value);
+  document.getElementById('angle-left-display').textContent = angle + '°';
+  renderSlopeWithAngle(activeCell.row, 'slope-left', angle);
+});
+
+document.getElementById('slider-right').addEventListener('input', function() {
+  if (!activeCell) return;
+  const angle = parseFloat(this.value);
+  document.getElementById('angle-right-display').textContent = angle + '°';
+  renderSlopeWithAngle(activeCell.col, 'slope-right', angle);
+});
+
+function verifyMatrix() {
+  const n = 5;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (matrix[i][j] <= 0 || matrix[i][j] > 9) {
+        document.getElementById('results').className = 'results';
+        return;
+      }
+    }
+  }
+
+  const colSums = [];
+  for (let j = 0; j < n; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += matrix[i][j];
+    colSums.push(s);
+  }
+
+  const normalized = [];
+  for (let i = 0; i < n; i++) {
+    normalized[i] = [];
+    for (let j = 0; j < n; j++) {
+      normalized[i][j] = matrix[i][j] / colSums[j];
+    }
+  }
+
+  const weights = [];
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let j = 0; j < n; j++) s += normalized[i][j];
+    weights.push(s / n);
+  }
+
+  const weightedSum = [];
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let j = 0; j < n; j++) s += matrix[i][j] * weights[j];
+    weightedSum.push(s);
+  }
+
+  const ratios = [];
+  for (let i = 0; i < n; i++) ratios.push(weightedSum[i] / weights[i]);
+
+  const lambdaMax = ratios.reduce((a, b) => a + b, 0) / n;
+  const CI = (lambdaMax - n) / (n - 1);
+  const RI = RI_MAP[n] || 1.12;
+  const CR = CI / RI;
+  const valid = CR < 0.1;
+
+  renderNormalizedMatrix(normalized, weights);
+  renderConsistency(lambdaMax, n, CI, RI, CR, valid);
+
+  document.getElementById('results').className = 'results visible';
+}
+
+function renderNormalizedMatrix(norm, weights) {
+  const container = document.getElementById('norm-container');
+  const n = norm.length;
+  let html = '<table class="norm"><thead><tr><th></th>';
+  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
+  html += '<th class="weight-col">Peso (Wi)</th></tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    html += '<tr><th>' + LABELS[i] + '</th>';
+    for (let j = 0; j < n; j++) html += '<td>' + norm[i][j].toFixed(3) + '</td>';
+    html += '<td class="weight-col">' + weights[i].toFixed(4) + '</td></tr>';
+  }
+  html += '<tr><th>TOTAL</th>';
+  for (let j = 0; j < n; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += norm[i][j];
+    html += '<td>' + s.toFixed(3) + '</td>';
+  }
+  html += '<td class="weight-col">' + weights.reduce((a, b) => a + b, 0).toFixed(4) + '</td></tr>';
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function renderConsistency(lambdaMax, n, CI, RI, CR, valid) {
+  const container = document.getElementById('consistency-container');
+  container.innerHTML = `
+    <div class="cons-grid">
+      <span class="label">Lambda Max (λ):</span>
+      <span class="value">${lambdaMax.toFixed(4)}</span>
+      <span class="label">N° Elementos (n):</span>
+      <span class="value">${n}</span>
+      <span class="label">Índice Consistencia (IC):</span>
+      <span class="value">${CI.toFixed(4)}</span>
+      <span class="label">Índice Aleatorio (IA):</span>
+      <span class="value">${RI.toFixed(2)}</span>
+      <span class="label">Razón Consistencia (RC):</span>
+      <span class="value ${valid ? 'pass' : 'fail'}">${(CR * 100).toFixed(2)}%</span>
+    </div>
+    <div class="eval-box ${valid ? 'pass' : 'fail'}">
+      ${valid ? '✓ MATRIZ VÁLIDA (RC &lt; 10%)' : '✗ REVISAR JUICIOS (RC ≥ 10%)'}
+    </div>
+  `;
+}
+
+
+function exportResults() {
+  const n = 5;
+  const colSums = [];
+  for (let j = 0; j < n; j++) { let s = 0; for (let i = 0; i < n; i++) s += matrix[i][j]; colSums.push(s); }
+  const normalized = [];
+  for (let i = 0; i < n; i++) { normalized[i] = []; for (let j = 0; j < n; j++) normalized[i][j] = matrix[i][j] / colSums[j]; }
+  const weights = [];
+  for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += normalized[i][j]; weights.push(s / n); }
+  const weightedSum = [];
+  for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += matrix[i][j] * weights[j]; weightedSum.push(s); }
+  const ratios = [];
+  for (let i = 0; i < n; i++) ratios.push(weightedSum[i] / weights[i]);
+  const lambdaMax = ratios.reduce((a, b) => a + b, 0) / n;
+  const CI = (lambdaMax - n) / (n - 1);
+  const RI = RI_MAP[n];
+  const CR = CI / RI;
+  const valid = CR < 0.1;
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html += '<head><meta charset="UTF-8"><style>th,td{border:1px solid #999;padding:5px 10px;text-align:center;font-family:Segoe UI,sans-serif;font-size:12px}';
+  html += 'th{background:#1f4e79;color:#fff;font-weight:700}';
+  html += '.row-hdr{background:#d9e2ec;font-weight:700;text-align:left}';
+  html += '.diag{background:#fffde7;font-weight:700}';
+  html += '.weight{background:#ebf5e8;font-weight:700}';
+  html += '.subh{font-size:14px;font-weight:700;color:#1f4e79;margin:18px 0 6px}';
+  html += '.eval{font-weight:700;font-size:13px;padding:8px 16px;display:inline-block;';
+  html += valid ? 'color:#2e7d32;background:#e8f5e9}' : 'color:#c62828;background:#ffebee}';
+  html += '</style></head><body>';
+  html += '<h2 style="color:#1f4e79">Matriz de Pendientes - Método AHP (CENEPRED)</h2>';
+
+  html += '<div class="subh">1. Matriz de Comparaciones Pareadas</div>';
+  html += '<table><tr><th></th>';
+  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
+  html += '</tr>';
+  for (let i = 0; i < n; i++) {
+    html += '<tr><td class="row-hdr">' + LABELS[i] + ' (' + RANGES[i] + ')</td>';
+    for (let j = 0; j < n; j++) {
+      let cls = i === j ? 'diag' : '';
+      html += '<td class="' + cls + '">' + esc(displayVals[i][j]) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '<tr><td class="row-hdr" style="background:#f2f2f2">TOTAL</td>';
+  for (let j = 0; j < n; j++) html += '<td style="background:#f2f2f2;font-weight:700">' + colSums[j].toFixed(3) + '</td>';
+  html += '</tr></table>';
+
+  html += '<div class="subh">2. Matriz Normalizada y Pesos (Wi)</div>';
+  html += '<table><tr><th></th>';
+  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
+  html += '<th>Peso (Wi)</th></tr>';
+  for (let i = 0; i < n; i++) {
+    html += '<tr><td class="row-hdr">' + LABELS[i] + '</td>';
+    for (let j = 0; j < n; j++) html += '<td>' + normalized[i][j].toFixed(3) + '</td>';
+    html += '<td class="weight">' + weights[i].toFixed(4) + '</td></tr>';
+  }
+  html += '<tr><td class="row-hdr" style="background:#f2f2f2">TOTAL</td>';
+  for (let j = 0; j < n; j++) {
+    let s = 0; for (let i = 0; i < n; i++) s += normalized[i][j];
+    html += '<td style="background:#f2f2f2">' + s.toFixed(3) + '</td>';
+  }
+  html += '<td class="weight" style="background:#f2f2f2">' + weights.reduce((a, b) => a + b, 0).toFixed(4) + '</td></tr></table>';
+
+  html += '<div class="subh">3. Control de Consistencia</div>';
+  html += '<table>';
+  html += '<tr><th style="text-align:left">Indicador</th><th>Valor</th></tr>';
+  html += '<tr><td style="text-align:left">Lambda Max (λ)</td><td>' + lambdaMax.toFixed(4) + '</td></tr>';
+  html += '<tr><td style="text-align:left">N° Elementos (n)</td><td>' + n + '</td></tr>';
+  html += '<tr><td style="text-align:left">Índice Consistencia (IC)</td><td>' + CI.toFixed(4) + '</td></tr>';
+  html += '<tr><td style="text-align:left">Índice Aleatorio (IA)</td><td>' + RI.toFixed(2) + '</td></tr>';
+  html += '<tr><td style="text-align:left">Razón Consistencia (RC)</td><td>' + (CR*100).toFixed(2) + '%</td></tr>';
+  html += '<tr><td style="text-align:left;font-weight:700">EVALUACIÓN</td><td class="eval">' + (valid ? 'MATRIZ VÁLIDA (RC &lt; 10%)' : 'REVISAR JUICIOS (RC ≥ 10%)') + '</td></tr>';
+  html += '</table>';
+
+  html += '<div class="subh">4. Vector Prioridad (Pesos)</div>';
+  html += '<table>';
+  for (let i = 0; i < n; i++) html += '<tr><td class="row-hdr">' + LABELS[i] + ' (' + RANGES[i] + ')</td><td class="weight">' + weights[i].toFixed(4) + '</td></tr>';
+  html += '</table>';
+
+  html += '<p style="color:#999;font-size:10px;margin-top:20px">Generado con Matriz de Pendientes AHP &mdash; ' + new Date().toLocaleString() + '</p>';
+  html += '</body></html>';
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'matriz_pendientes_ahp.xls';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+buildMatrix();
+verifyMatrix();
+</script>
+</body>
+</html>

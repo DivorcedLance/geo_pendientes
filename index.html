@@ -370,6 +370,45 @@
   .eval-box.pass { background: var(--bg-pass); color: var(--text-pass); border: 1px solid var(--border-pass); }
   .eval-box.fail { background: var(--bg-fail); color: var(--text-fail); border: 1px solid var(--border-fail); }
 
+  .steps-container { display: flex; flex-direction: column; gap: 20px; }
+  .step-card {
+    background: var(--bg-card); border: 1px solid var(--border-card);
+    border-radius: 10px; padding: 20px;
+    transition: background .3s, border-color .3s;
+  }
+  .step-card h4 {
+    font-size: 13px; color: var(--text-h3); margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .cons-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .cons-grid-2col { grid-template-columns: 1fr; } }
+
+  table.calc { border-collapse: collapse; font-size: 13px; width: 100%; }
+  table.calc th, table.calc td {
+    border: 1px solid var(--border-panel); padding: 6px 10px; text-align: center;
+    transition: border-color .3s;
+  }
+  table.calc th {
+    background: var(--bg-norm-th); font-weight: 600; font-size: 12px;
+    color: var(--text-norm-th);
+  }
+  table.calc .row-hdr { background: var(--bg-norm-th); font-weight: 600; text-align: left; }
+  table.calc .diag { background: var(--bg-diag); font-weight: 700; color: var(--text-diag); }
+  table.calc .sum-row td { background: var(--bg-total); font-weight: 700; border-top: 2px solid var(--border-total); }
+  table.calc .sum-row th { background: var(--bg-total); font-weight: 700; text-align: right; }
+  table.calc .inv-row td { background: var(--bg-total); font-weight: 600; border-top: 1px solid var(--border-matrix); }
+  table.calc .inv-row th { background: var(--bg-total); font-weight: 600; text-align: right; }
+  table.calc .weight-col { background: var(--bg-weight); font-weight: 700; color: var(--text-weight); }
+  table.calc .pct-col { background: var(--bg-weight); font-weight: 700; color: var(--text-weight); }
+  table.calc .val { font-weight: 700; color: var(--text-h3); font-size: 14px; }
+  table.calc .val.pass { color: var(--text-pass); }
+  table.calc .val.fail { color: var(--text-fail); }
+  table.calc .eval-row td { padding: 10px; }
+  table.calc .eval-label { font-weight: 700; font-size: 13px; text-align: right; }
+  table.calc .eval-val { font-weight: 700; font-size: 14px; text-align: center; }
+  table.calc .eval-val.pass { color: var(--text-pass); background: var(--bg-pass); }
+  table.calc .eval-val.fail { color: var(--text-fail); background: var(--bg-fail); }
+
   @media (max-width: 1024px) {
     body { padding: 12px; }
     .layout { flex-direction: column; padding: 16px; gap: 16px; }
@@ -408,15 +447,13 @@
     .input-group { flex-direction: column; gap: 6px; }
     .input-group input { width: 100%; padding: 8px; font-size: 14px; }
     .input-group .current-val { font-size: 12px; }
-    .result-card { padding: 10px; }
-    .result-card h4 { font-size: 12px; }
+    .step-card { padding: 10px; }
+    .step-card h4 { font-size: 12px; }
     .saaty-ref { font-size: 10px; padding: 6px 8px; }
     .saaty-ref .row { font-size: 10px; }
-    table.norm { font-size: 11px; }
-    table.norm th, table.norm td { padding: 4px 4px; }
-    .cons-grid { font-size: 12px; gap: 6px 10px; }
-    .cons-grid .value { font-size: 14px; }
-    .eval-box { font-size: 13px; padding: 8px 12px; }
+    table.calc { font-size: 11px; }
+    table.calc th, table.calc td { padding: 4px 4px; }
+    table.calc .val { font-size: 12px; }
     .actions button { padding: 8px 20px; font-size: 13px; }
     .slider-control label { font-size: 10px; }
     .theme-toggle { width: 30px; height: 30px; font-size: 15px; }
@@ -505,14 +542,24 @@
   </div>
 
   <div class="results" id="results">
-    <div class="results-grid">
-      <div class="result-card">
-        <h4>&#x1F4CA; Matriz Normalizada &amp; Pesos (Wi)</h4>
-        <div id="norm-container"></div>
+    <div class="steps-container">
+      <div class="step-card">
+        <h4>PASOS 1, 2 Y 3 &mdash; Matriz de Comparaciones, Sumas e Inversa (1/Suma)</h4>
+        <div id="step1-container"></div>
       </div>
-      <div class="result-card">
-        <h4>&#x2699; Control de Consistencia</h4>
-        <div id="consistency-container"></div>
+      <div class="step-card">
+        <h4>PASOS 4 Y 5 &mdash; Matriz de Normalizaci&oacute;n y Vector Priorizaci&oacute;n</h4>
+        <div id="step2-container"></div>
+      </div>
+      <div class="cons-grid-2col">
+        <div class="step-card">
+          <h4>CONSISTENCIA &mdash; Suma Ponderada y &lambda;</h4>
+          <div id="step3-container"></div>
+        </div>
+        <div class="step-card">
+          <h4>CONSISTENCIA &mdash; &Iacute;ndices Finales</h4>
+          <div id="step4-container"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -901,53 +948,86 @@ function verifyMatrix() {
   const CR = CI / RI;
   const valid = CR < 0.1;
 
-  renderNormalizedMatrix(normalized, weights);
-  renderConsistency(lambdaMax, n, CI, RI, CR, valid);
+  renderNormalizedMatrix(normalized, weights, colSums);
+  renderConsistency(lambdaMax, n, CI, RI, CR, valid, weightedSum, weights, ratios);
 
   document.getElementById('results').className = 'results visible';
 }
 
-function renderNormalizedMatrix(norm, weights) {
-  const container = document.getElementById('norm-container');
+function renderNormalizedMatrix(norm, weights, colSums) {
   const n = norm.length;
-  let html = '<table class="norm"><thead><tr><th></th>';
-  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
-  html += '<th class="weight-col">Peso (Wi)</th></tr></thead><tbody>';
+
+  // PASOS 1, 2, 3 — Matriz original + Sumas + 1/Suma
+  const c1 = document.getElementById('step1-container');
+  let h = '<table class="calc"><thead><tr><th></th>';
+  for (let j = 0; j < n; j++) h += '<th>' + LABELS[j] + '</th>';
+  h += '</tr></thead><tbody>';
   for (let i = 0; i < n; i++) {
-    html += '<tr><th>' + LABELS[i] + '</th>';
-    for (let j = 0; j < n; j++) html += '<td>' + norm[i][j].toFixed(3) + '</td>';
-    html += '<td class="weight-col">' + weights[i].toFixed(4) + '</td></tr>';
+    h += '<tr><th class="row-hdr">' + LABELS[i] + ' (' + RANGES[i] + ')</th>';
+    for (let j = 0; j < n; j++) {
+      if (i === j) h += '<td class="diag">1</td>';
+      else h += '<td>' + matrix[i][j].toFixed(4) + '</td>';
+    }
+    h += '</tr>';
   }
-  html += '<tr><th>TOTAL</th>';
+  h += '<tr class="sum-row"><th>Suma</th>';
+  for (let j = 0; j < n; j++) h += '<td>' + colSums[j].toFixed(3) + '</td>';
+  h += '</tr>';
+  h += '<tr class="inv-row"><th>1 / Suma</th>';
+  for (let j = 0; j < n; j++) h += '<td>' + (1 / colSums[j]).toFixed(4) + '</td>';
+  h += '</tr>';
+  h += '</tbody></table>';
+  c1.innerHTML = h;
+
+  // PASOS 4, 5 — Matriz Normalizada + Vector Priorización + Porcentaje
+  const c2 = document.getElementById('step2-container');
+  h = '<table class="calc"><thead><tr><th></th>';
+  for (let j = 0; j < n; j++) h += '<th>' + LABELS[j] + '</th>';
+  h += '<th class="weight-col">Vector Priorización</th><th class="pct-col">Porcentaje</th></tr></thead><tbody>';
+  for (let i = 0; i < n; i++) {
+    h += '<tr><th class="row-hdr">' + LABELS[i] + '</th>';
+    for (let j = 0; j < n; j++) h += '<td>' + norm[i][j].toFixed(3) + '</td>';
+    const pct = (weights[i] * 100).toFixed(2);
+    h += '<td class="weight-col">' + weights[i].toFixed(4) + '</td><td class="pct-col">' + pct + '%</td></tr>';
+  }
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  h += '<tr class="sum-row"><th>Total</th>';
   for (let j = 0; j < n; j++) {
     let s = 0;
     for (let i = 0; i < n; i++) s += norm[i][j];
-    html += '<td>' + s.toFixed(3) + '</td>';
+    h += '<td>' + s.toFixed(3) + '</td>';
   }
-  html += '<td class="weight-col">' + weights.reduce((a, b) => a + b, 0).toFixed(4) + '</td></tr>';
-  html += '</tbody></table>';
-  container.innerHTML = html;
+  h += '<td class="weight-col">' + totalW.toFixed(4) + '</td><td class="pct-col">' + (totalW * 100).toFixed(2) + '%</td></tr>';
+  h += '</tbody></table>';
+  c2.innerHTML = h;
 }
 
-function renderConsistency(lambdaMax, n, CI, RI, CR, valid) {
-  const container = document.getElementById('consistency-container');
-  container.innerHTML = `
-    <div class="cons-grid">
-      <span class="label">Lambda Max (λ):</span>
-      <span class="value">${lambdaMax.toFixed(4)}</span>
-      <span class="label">N° Elementos (n):</span>
-      <span class="value">${n}</span>
-      <span class="label">Índice Consistencia (IC):</span>
-      <span class="value">${CI.toFixed(4)}</span>
-      <span class="label">Índice Aleatorio (IA):</span>
-      <span class="value">${RI.toFixed(2)}</span>
-      <span class="label">Razón Consistencia (RC):</span>
-      <span class="value ${valid ? 'pass' : 'fail'}">${(CR * 100).toFixed(2)}%</span>
-    </div>
-    <div class="eval-box ${valid ? 'pass' : 'fail'}">
-      ${valid ? '✓ MATRIZ VÁLIDA (RC &lt; 10%)' : '✗ REVISAR JUICIOS (RC ≥ 10%)'}
-    </div>
-  `;
+function renderConsistency(lambdaMax, n, CI, RI, CR, valid, weightedSum, weights, ratios) {
+  const nEl = weights.length;
+
+  // CONSISTENCIA — Suma Ponderada y Lambda
+  const c3 = document.getElementById('step3-container');
+  let h = '<table class="calc"><thead><tr><th></th><th>Vector Priorización</th><th>Vector Suma Ponderada</th><th>&lambda;</th></tr></thead><tbody>';
+  for (let i = 0; i < nEl; i++) {
+    h += '<tr><th class="row-hdr">' + LABELS[i] + '</th>';
+    h += '<td>' + weights[i].toFixed(4) + '</td>';
+    h += '<td>' + weightedSum[i].toFixed(4) + '</td>';
+    h += '<td>' + ratios[i].toFixed(4) + '</td></tr>';
+  }
+  h += '</tbody></table>';
+  c3.innerHTML = h;
+
+  // CONSISTENCIA — Índices Finales
+  const c4 = document.getElementById('step4-container');
+  h = '<table class="calc"><thead><tr><th>Indicador</th><th>Valor</th></tr></thead><tbody>';
+  h += '<tr><td class="row-hdr">Lambda Max Promedio (λ)</td><td class="val">' + lambdaMax.toFixed(4) + '</td></tr>';
+  h += '<tr><td class="row-hdr">N° Elementos (n)</td><td class="val">' + n + '</td></tr>';
+  h += '<tr><td class="row-hdr">Índice Consistencia (IC)</td><td class="val">' + CI.toFixed(4) + '</td></tr>';
+  h += '<tr><td class="row-hdr">Índice Aleatorio (IA)</td><td class="val">' + RI.toFixed(3) + '</td></tr>';
+  h += '<tr><td class="row-hdr">Razón Consistencia (RC)</td><td class="val ' + (valid ? 'pass' : 'fail') + '">' + (CR * 100).toFixed(2) + '%</td></tr>';
+  h += '<tr class="eval-row"><td class="eval-label">EVALUACIÓN</td><td class="eval-val ' + (valid ? 'pass' : 'fail') + '">' + (valid ? '✓ MATRIZ VÁLIDA (RC &lt; 10%)' : '✗ REVISAR JUICIOS (RC ≥ 10%)') + '</td></tr>';
+  h += '</tbody></table>';
+  c4.innerHTML = h;
 }
 
 
@@ -969,74 +1049,93 @@ function exportResults() {
   const CR = CI / RI;
   const valid = CR < 0.1;
 
-  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  let h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  h += '<head><meta charset="UTF-8"><style>';
+  h += 'body{font-family:Calibri,sans-serif;padding:20px;color:#222}';
+  h += 'th,td{border:1px solid #999;padding:5px 10px;text-align:center;font-size:11px}';
+  h += 'th{background:#1f4e79;color:#fff;font-weight:700}';
+  h += '.rh{background:#d9e2ec;font-weight:700;text-align:left;color:#1a3a5a}';
+  h += '.dg{background:#fffde7;font-weight:700;color:#b8860b}';
+  h += '.w{background:#ebf5e8;font-weight:700;color:#2e7d32}';
+  h += '.p{background:#ebf5e8;font-weight:700;color:#2e7d32}';
+  h += '.sm{background:#f2f2f2;font-weight:700;border-top:2px solid #bbb}';
+  h += '.iv{background:#f2f2f2;border-top:1px solid #ccc}';
+  h += '.tl{font-size:16px;font-weight:700;color:#1f4e79;margin:0 0 4px 0}';
+  h += '.sh{font-size:13px;font-weight:700;color:#1f4e79;margin:18px 0 6px 0}';
+  h += '.ev{font-weight:700;font-size:12px;padding:6px 14px;display:inline-block;';
+  h += valid ? 'color:#2e7d32;background:#e8f5e9}' : 'color:#c62828;background:#ffebee}';
+  h += '.vl{font-weight:700;color:#1a3a5a;font-size:13px}';
+  h += '.vl.g{color:#2e7d32}';
+  h += '.vl.r{color:#c62828}';
+  h += '</style></head><body>';
 
-  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-  html += '<head><meta charset="UTF-8"><style>';
-  html += 'th,td{border:1px solid #999;padding:5px 10px;text-align:center;font-family:Segoe UI,sans-serif;font-size:12px}';
-  html += 'th{background:#1f4e79;color:#fff;font-weight:700}';
-  html += '.row-hdr{background:#d9e2ec;font-weight:700;text-align:left}';
-  html += '.diag{background:#fffde7;font-weight:700}';
-  html += '.weight{background:#ebf5e8;font-weight:700}';
-  html += '.subh{font-size:14px;font-weight:700;color:#1f4e79;margin:18px 0 6px}';
-  html += '.eval{font-weight:700;font-size:13px;padding:8px 16px;display:inline-block;';
-  html += valid ? 'color:#2e7d32;background:#e8f5e9}' : 'color:#c62828;background:#ffebee}';
-  html += '</style></head><body>';
-  html += '<h2 style="color:#1f4e79">Matriz de Pendientes - Método AHP (CENEPRED)</h2>';
+  h += '<p class="tl">Matriz de Pendientes &mdash; M&eacute;todo AHP (Paso a Paso CENEPRED)</p>';
 
-  html += '<div class="subh">1. Matriz de Comparaciones Pareadas</div>';
-  html += '<table><tr><th></th>';
-  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
-  html += '</tr>';
+  // ——— SECCIÓN 1: PASOS 1, 2 y 3 ———
+  h += '<p class="sh">PASOS 1, 2 Y 3 &mdash; Matriz de Comparaciones, Sumas e Inversa (1/Suma)</p>';
+  h += '<table><tr><th></th>';
+  for (let j = 0; j < n; j++) h += '<th>' + LABELS[j] + '</th>';
+  h += '</tr>';
   for (let i = 0; i < n; i++) {
-    html += '<tr><td class="row-hdr">' + LABELS[i] + ' (' + RANGES[i] + ')</td>';
+    h += '<tr><td class="rh">' + LABELS[i] + ' (' + RANGES[i] + ')</td>';
     for (let j = 0; j < n; j++) {
-      let cls = i === j ? 'diag' : '';
-      let v = i === j ? 1 : matrix[i][j];
-      html += '<td class="' + cls + '">' + v.toFixed(4) + '</td>';
+      if (i === j) h += '<td class="dg">1</td>';
+      else h += '<td>' + matrix[i][j].toFixed(4) + '</td>';
     }
-    html += '</tr>';
+    h += '</tr>';
   }
-  html += '<tr><td class="row-hdr" style="background:#f2f2f2">TOTAL</td>';
-  for (let j = 0; j < n; j++) html += '<td style="background:#f2f2f2;font-weight:700">' + colSums[j].toFixed(3) + '</td>';
-  html += '</tr></table>';
+  h += '<tr><td class="rh sm">Suma</td>';
+  for (let j = 0; j < n; j++) h += '<td class="sm">' + colSums[j].toFixed(3) + '</td>';
+  h += '</tr>';
+  h += '<tr><td class="rh iv">1 / Suma</td>';
+  for (let j = 0; j < n; j++) h += '<td class="iv">' + (1 / colSums[j]).toFixed(4) + '</td>';
+  h += '</tr></table>';
 
-  html += '<div class="subh">2. Matriz Normalizada y Pesos (Wi)</div>';
-  html += '<table><tr><th></th>';
-  for (let j = 0; j < n; j++) html += '<th>' + LABELS[j] + '</th>';
-  html += '<th>Peso (Wi)</th></tr>';
+  // ——— SECCIÓN 2: PASOS 4 y 5 ———
+  const totalW = weights.reduce((a, b) => a + b, 0);
+  h += '<p class="sh">PASOS 4 Y 5 &mdash; Matriz de Normalizaci&oacute;n y Vector Priorizaci&oacute;n</p>';
+  h += '<table><tr><th></th>';
+  for (let j = 0; j < n; j++) h += '<th>' + LABELS[j] + '</th>';
+  h += '<th class="w">Vector Priorizaci&oacute;n</th><th class="p">Porcentaje</th></tr>';
   for (let i = 0; i < n; i++) {
-    html += '<tr><td class="row-hdr">' + LABELS[i] + '</td>';
-    for (let j = 0; j < n; j++) html += '<td>' + normalized[i][j].toFixed(3) + '</td>';
-    html += '<td class="weight">' + weights[i].toFixed(4) + '</td></tr>';
+    h += '<tr><td class="rh">' + LABELS[i] + '</td>';
+    for (let j = 0; j < n; j++) h += '<td>' + normalized[i][j].toFixed(3) + '</td>';
+    const pct = (weights[i] * 100).toFixed(2);
+    h += '<td class="w">' + weights[i].toFixed(4) + '</td><td class="p">' + pct + '%</td></tr>';
   }
-  html += '<tr><td class="row-hdr" style="background:#f2f2f2">TOTAL</td>';
+  h += '<tr><td class="rh sm">Total</td>';
   for (let j = 0; j < n; j++) {
-    let s = 0; for (let i = 0; i < n; i++) s += normalized[i][j];
-    html += '<td style="background:#f2f2f2">' + s.toFixed(3) + '</td>';
+    let s = 0;
+    for (let i = 0; i < n; i++) s += normalized[i][j];
+    h += '<td class="sm">' + s.toFixed(3) + '</td>';
   }
-  html += '<td class="weight" style="background:#f2f2f2">' + weights.reduce((a, b) => a + b, 0).toFixed(4) + '</td></tr></table>';
+  h += '<td class="w sm">' + totalW.toFixed(4) + '</td><td class="p sm">' + (totalW * 100).toFixed(2) + '%</td></tr></table>';
 
-  html += '<div class="subh">3. Control de Consistencia</div>';
-  html += '<table>';
-  html += '<tr><th style="text-align:left">Indicador</th><th>Valor</th></tr>';
-  html += '<tr><td style="text-align:left">Lambda Max (λ)</td><td>' + lambdaMax.toFixed(4) + '</td></tr>';
-  html += '<tr><td style="text-align:left">N° Elementos (n)</td><td>' + n + '</td></tr>';
-  html += '<tr><td style="text-align:left">Índice Consistencia (IC)</td><td>' + CI.toFixed(4) + '</td></tr>';
-  html += '<tr><td style="text-align:left">Índice Aleatorio (IA)</td><td>' + RI.toFixed(2) + '</td></tr>';
-  html += '<tr><td style="text-align:left">Razón Consistencia (RC)</td><td>' + (CR*100).toFixed(2) + '%</td></tr>';
-  html += '<tr><td style="text-align:left;font-weight:700">EVALUACIÓN</td><td class="eval">' + (valid ? 'MATRIZ VÁLIDA (RC &lt; 10%)' : 'REVISAR JUICIOS (RC ≥ 10%)') + '</td></tr>';
-  html += '</table>';
+  // ——— SECCIÓN 3: CONSISTENCIA Suma Ponderada y Lambda ———
+  h += '<p class="sh">CONSISTENCIA &mdash; PASOS 1 Y 2: Suma Ponderada y &lambda;</p>';
+  h += '<table><tr><th></th><th>Vector Priorizaci&oacute;n</th><th>Vector Suma Ponderada</th><th>&lambda;</th></tr>';
+  for (let i = 0; i < n; i++) {
+    h += '<tr><td class="rh">' + LABELS[i] + '</td>';
+    h += '<td>' + weights[i].toFixed(4) + '</td>';
+    h += '<td>' + weightedSum[i].toFixed(4) + '</td>';
+    h += '<td class="vl">' + ratios[i].toFixed(4) + '</td></tr>';
+  }
+  h += '</table>';
 
-  html += '<div class="subh">4. Vector Prioridad (Pesos)</div>';
-  html += '<table>';
-  for (let i = 0; i < n; i++) html += '<tr><td class="row-hdr">' + LABELS[i] + ' (' + RANGES[i] + ')</td><td class="weight">' + weights[i].toFixed(4) + '</td></tr>';
-  html += '</table>';
+  // ——— SECCIÓN 4: CONSISTENCIA Índices Finales ———
+  h += '<p class="sh">CONSISTENCIA &mdash; PASOS 3 Y 4: &Iacute;ndices Finales</p>';
+  h += '<table><tr><th style="text-align:left">Indicador</th><th>Valor</th></tr>';
+  h += '<tr><td class="rh">Lambda Max Promedio (&lambda;)</td><td class="vl">' + lambdaMax.toFixed(4) + '</td></tr>';
+  h += '<tr><td class="rh">N&deg; Elementos (n)</td><td class="vl">' + n + '</td></tr>';
+  h += '<tr><td class="rh">&Iacute;ndice Consistencia (IC)</td><td class="vl">' + CI.toFixed(4) + '</td></tr>';
+  h += '<tr><td class="rh">&Iacute;ndice Aleatorio (IA)</td><td class="vl">' + RI.toFixed(3) + '</td></tr>';
+  h += '<tr><td class="rh">Raz&oacute;n Consistencia (RC)</td><td class="vl ' + (valid ? 'g' : 'r') + '">' + (CR * 100).toFixed(2) + '%</td></tr>';
+  h += '<tr><td class="rh" style="font-weight:700">EVALUACI&Oacute;N</td><td class="ev">' + (valid ? 'MATRIZ V&Aacute;LIDA (RC &lt; 10%)' : 'REVISAR JUICIOS (RC &ge; 10%)') + '</td></tr>';
+  h += '</table>';
 
-  html += '<p style="color:#999;font-size:10px;margin-top:20px">Generado con Matriz de Pendientes AHP &mdash; ' + new Date().toLocaleString() + '</p>';
-  html += '</body></html>';
+  h += '</body></html>';
 
-  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+  const blob = new Blob([h], { type: 'application/vnd.ms-excel' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'matriz_pendientes_ahp.xls';

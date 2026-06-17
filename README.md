@@ -4,6 +4,8 @@ Herramienta interactiva para el cálculo de la **Matriz de Pendientes** aplicand
 
 > **Demo:** <https://divor.github.io/geo_pendientes/>
 
+![Vista principal de la aplicación](docs/screenshots/01-initial-state.png)
+
 ## Características
 
 - Matriz de comparaciones pareadas **5×5** (PN1–PN5) con escala de Saaty (1, 3, 5, 7, 9 / 1/X)
@@ -16,6 +18,7 @@ Herramienta interactiva para el cálculo de la **Matriz de Pendientes** aplicand
   - Razón de Consistencia (RC) con evaluación RC < 10%
 - Exportación a **Excel** (`.xls`) con reporte completo (valores decimales)
 - Interfaz responsive, sin dependencias externas (HTML + CSS + JS vanilla)
+- Modo claro/oscuro con persistencia en `localStorage`
 
 ## Metodología
 
@@ -52,6 +55,30 @@ El AHP descompone el problema en una jerarquía y utiliza comparaciones pareadas
 3. Usa el panel lateral para ajustar el valor de comparación
 4. Los resultados se actualizan automáticamente
 5. Exporta a Excel con el botón correspondiente
+
+## Capturas
+
+### Comparación de pendientes
+
+Al hacer clic en una celda del triángulo superior se muestra el panel de comparación con la visualización de ambas pendientes, el control deslizante de ángulos y la referencia rápida a la escala de Saaty.
+
+![Panel de comparación de pendientes](docs/screenshots/02-comparison-panel.png)
+
+Detalle del panel de comparación con la escala de Saaty:
+
+![Detalle del panel de comparación](docs/screenshots/03-comparison-detail.png)
+
+### Modo oscuro
+
+La aplicación incluye un tema oscuro que se adapta automáticamente a las preferencias del usuario y se persiste entre sesiones.
+
+![Modo oscuro](docs/screenshots/04-dark-mode.png)
+
+### Diseño responsive
+
+La interfaz se adapta a dispositivos móviles reorganizando los paneles verticalmente.
+
+![Vista móvil](docs/screenshots/05-mobile-view.png)
 
 ## Despliegue
 
